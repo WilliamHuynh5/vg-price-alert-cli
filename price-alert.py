@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup, SoupStrainer
-import pandas as pd
 import pyshorteners
 from pushbullet import Pushbullet
 import os
