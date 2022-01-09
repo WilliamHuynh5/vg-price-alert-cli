@@ -2,6 +2,14 @@ import requests
 from bs4 import BeautifulSoup, SoupStrainer
 import pandas as pd
 import pyshorteners
+from pushbullet import Pushbullet
+import os
+import json
+import datetime
+import select
+
+
+pb = Pushbullet("o.URzMl8FYm2etEpKKGkA3UNzXKGKnm7Cw")
 
 
 class PriceAlert():
@@ -13,17 +21,147 @@ class PriceAlert():
         url = "https://gamedeals.com.au/search.php?search="
         allProducts = {}
         digitalStores = ['store.playstation.au', 'nintendo.com.au', 'xbox.com.au']
-        payloads = get_search_payloads()
+        
+        try:
+            with open('payloads.json') as json_file:
+                payloads = json.load(json_file)
+            print("Existing payloads found")
+        except:
+            payloads = {}
+            print("Existing payloads not found")
+        
+        input("\nPress [ENTER] to continue: ")
 
-        for title in payloads:
-            platforms = payloads[title]
-            allProducts = query_product(url, title, platforms, digitalStores, allProducts)
-            allTimeLows = update_all_time_lows(allProducts)
-        get_lowest_product(allTimeLows)
+        while True:
+            clear_terminal()
+            print("[0] Initiate automatic scrape")
+            print("[1] Add games to scrape list")
+            print("[2] Remove a game from scrape list")
+            print("[3] View games on scrape list")
+            print("[4] Write payloads to JSON")
+            print("[5] Read JSON file into payloads")
+            print("[6] Run a manual scrape")
+            print("[Q] Quit")
+
+            selection = input("\nEnter selection: ")
+
+            if selection == "0":
+                automatatic_scrape(payloads, url, digitalStores, allProducts)
+            elif selection == "1": # Add games
+                payloads = get_search_payloads(payloads)
+            elif selection == "2": # Remove games
+                remove_selected_payload(payloads)
+            elif selection == "3": # View games
+                view_current_payloads(payloads)
+            elif selection == "4": # Write to JSON
+                write_payloads_to_json(payloads)
+            elif selection == "5": # Read from JSON
+                payloads = read_json_into_payloads()
+            elif selection == "6": # Read from JSON
+                scrape(payloads, url, digitalStores, allProducts)
+                input("\nPress [ENTER] to continue: ") 
+            elif selection == "Q" or selection == 'q': # Quit
+                exit(0)
+            else:
+                print("Invalid selection.")
+                exit(0)
+        
+
+
+
+
 
     
-def get_search_payloads():
-    payloads = {}
+def clear_terminal():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
+def automatatic_scrape(payloads, url, digitalStores, allProducts):
+    clear_terminal()
+    # Creates a backup before scrape
+    write_payloads_to_json(payloads)
+
+    print("Initiating scraping...")
+    times = ['00:00:00', '06:00:00', '09:00:00', '12:00:00']
+    while True:
+        now = datetime.datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+
+        if current_time in times:
+            scrape(payloads, url, digitalStores, allProducts)
+
+def scrape(payloads, url, digitalStores, allProducts):
+    clear_terminal()
+    print("Timestamp: " + datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y"))
+    print("Querying payloads...")
+    print("This will take some time...\n")
+    for title in payloads:
+        platforms = payloads[title]
+        allProducts = query_product(url, title, platforms, digitalStores, allProducts)
+        allTimeLows = update_all_time_lows(allProducts)
+    get_lowest_product(allTimeLows)
+
+    
+
+def read_json_into_payloads():
+    clear_terminal()
+    fileName = input("Enter JSON file to read from: ")
+    try:
+        with open(fileName) as json_file:
+            data = json.load(json_file)
+    except:
+        print("Failed to load!")
+        input("\nPress [ENTER] to continue: ")
+        return
+    
+    print("Successfully loaded!")
+    input("\nPress [ENTER] to continue: ")
+    return data
+
+def write_payloads_to_json(payloads):
+    clear_terminal()
+    try:
+        with open('payloads.json', 'w') as fp:
+            json.dump(payloads, fp)
+        print("Payloads written!")
+    except:
+        print("Failed to write!")
+
+    input("\nPress [ENTER] to continue: ")
+
+def remove_selected_payload(payloads):
+    clear_terminal()
+    print("Current Payloads: \n")
+    i = 0
+    for game in payloads:
+        print("[" + str(i) + "] " + game + " -> " + str(payloads[game]))
+        i+=1
+
+    entry = input("\nSelect an entry to remove: ")
+    payloads_keys = list(payloads)
+    key_to_remove = payloads_keys[int(entry)]
+
+    try:
+        payloads.pop(key_to_remove)
+        print("\n" + key_to_remove + " has been removed.")
+    except:
+        print("Failed to remove!")
+
+    input("\nPress [ENTER] to continue: ")
+    return payloads    
+
+def view_current_payloads(payloads):
+    clear_terminal()
+    print("Current Payloads: \n")
+    for game in payloads:
+        print(game + " -> " + str(payloads[game]))
+
+    input("\nPress [ENTER] to continue: ")
+    return
+
+
+def get_search_payloads(payloads):
+    clear_terminal()
     while True:
         try:
             search = input("Enter game: ").lower()
@@ -52,10 +190,11 @@ def update_all_time_lows(allProducts):
     for product in allProducts:
         allProducts[product] = sorted(allProducts[product], key = lambda i: (i['price']))
 
+    with open('all-time-lows.json', 'w') as fp:
+        json.dump(allProducts, fp)
     return allProducts
         
 def query_product(url, searchTerm, platforms, digitalStores, finalDict):
-
 
     for platform in platforms:
         allProducts = []
@@ -85,6 +224,8 @@ def query_product(url, searchTerm, platforms, digitalStores, finalDict):
     return finalDict
 
 def get_lowest_product(allTimeLows):
+
+        smsPayload = ""
         for query in allTimeLows:
             lowestPrice = float('inf')
             for product in allTimeLows[query]:
@@ -95,14 +236,22 @@ def get_lowest_product(allTimeLows):
                 url = product["url"]
 
                 if price <= lowestPrice:
+
+                    smsPayload = smsPayload + "Title: " + platf + " | " + title + "\n" + "Store: " + lowestStore + "\n" + "Price: " + "$" + str(price) + "\n" + "  URL: " + url + "\n\n"
+
                     print("###### LOWEST ######")
                     print("Title: " + platf + " | " + title)
                     print("Store: " + lowestStore)
                     print("Price: " + "$" + str(price))
                     print("  URL: " + url)
                     
+
+
                     #print("####################")
                     lowestPrice = price
+        device = pb.devices[0]
+        # Uncomment this to send to phone
+        # push = pb.push_sms(device, "+61405991322", smsPayload) 
 
 priceAlert = PriceAlert()
 priceAlert.run()
