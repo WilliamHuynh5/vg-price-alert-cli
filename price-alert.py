@@ -243,11 +243,11 @@ def get_lowest_product(allTimeLows):
 
                     smsPayload = smsPayload + "Title: " + platf + " | " + title + "\n" + "Store: " + lowestStore + "\n" + "Price: " + "$" + str(price) + "\n" + "  URL: " + url + "\n\n"
 
-                    print("###### LOWEST ######")
-                    print("Title: " + platf + " | " + title)
-                    print("Store: " + lowestStore)
-                    print("Price: " + "$" + str(price))
-                    print("  URL: " + url)
+                    # print("###### LOWEST ######")
+                    # print("Title: " + platf + " | " + title)
+                    # print("Store: " + lowestStore)
+                    # print("Price: " + "$" + str(price))
+                    # print("  URL: " + url)
                     
 
 
@@ -255,7 +255,7 @@ def get_lowest_product(allTimeLows):
                     lowestPrice = price
         device = pb.devices[0]
         # Uncomment this to send to phone
-        # push = pb.push_sms(device, "+61405991322", smsPayload) 
+        push = pb.push_sms(device, "+61405991322", smsPayload) 
 
 priceAlert = PriceAlert()
 priceAlert.run()
