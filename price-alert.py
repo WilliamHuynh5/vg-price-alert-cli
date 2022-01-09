@@ -20,7 +20,7 @@ class PriceAlert():
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36'}
         url = "https://gamedeals.com.au/search.php?search="
         allProducts = {}
-        digitalStores = ['store.playstation.au', 'nintendo.com.au', 'xbox.com.au']
+        exclusions = ['store.playstation.au',  'xbox.com.au', 'mightyape.com.au']
         
         try:
             with open('payloads.json') as json_file:
@@ -46,7 +46,7 @@ class PriceAlert():
             selection = input("\nEnter selection: ")
 
             if selection == "0":
-                automatatic_scrape(payloads, url, digitalStores, allProducts)
+                automatatic_scrape(payloads, url, exclusions, allProducts)
             elif selection == "1": # Add games
                 payloads = get_search_payloads(payloads)
             elif selection == "2": # Remove games
@@ -58,7 +58,7 @@ class PriceAlert():
             elif selection == "5": # Read from JSON
                 payloads = read_json_into_payloads()
             elif selection == "6": # Read from JSON
-                scrape(payloads, url, digitalStores, allProducts)
+                scrape(payloads, url, exclusions, allProducts)
                 input("\nPress [ENTER] to continue: ") 
             elif selection == "Q" or selection == 'q': # Quit
                 exit(0)
@@ -76,7 +76,7 @@ def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def automatatic_scrape(payloads, url, digitalStores, allProducts):
+def automatatic_scrape(payloads, url, exclusions, allProducts):
     clear_terminal()
     # Creates a backup before scrape
     write_payloads_to_json(payloads)
@@ -88,16 +88,16 @@ def automatatic_scrape(payloads, url, digitalStores, allProducts):
         current_time = now.strftime("%H:%M:%S")
 
         if current_time in times:
-            scrape(payloads, url, digitalStores, allProducts)
+            scrape(payloads, url, exclusions, allProducts)
 
-def scrape(payloads, url, digitalStores, allProducts):
+def scrape(payloads, url, exclusions, allProducts):
     clear_terminal()
     print("Timestamp: " + datetime.datetime.now().strftime("%H:%M:%S %d-%m-%Y"))
     print("Querying payloads...")
     print("This will take some time...\n")
     for title in payloads:
         platforms = payloads[title]
-        allProducts = query_product(url, title, platforms, digitalStores, allProducts)
+        allProducts = query_product(url, title, platforms, exclusions, allProducts)
         allTimeLows = update_all_time_lows(allProducts)
     get_lowest_product(allTimeLows)
 
@@ -136,12 +136,17 @@ def remove_selected_payload(payloads):
     for game in payloads:
         print("[" + str(i) + "] " + game + " -> " + str(payloads[game]))
         i+=1
-
+    print("[Q] Quit" )
     entry = input("\nSelect an entry to remove: ")
+
+    if entry == 'q' or entry == "Q":
+        return
+
     payloads_keys = list(payloads)
-    key_to_remove = payloads_keys[int(entry)]
+    
 
     try:
+        key_to_remove = payloads_keys[int(entry)]
         payloads.pop(key_to_remove)
         print("\n" + key_to_remove + " has been removed.")
     except:
@@ -194,7 +199,7 @@ def update_all_time_lows(allProducts):
         json.dump(allProducts, fp)
     return allProducts
         
-def query_product(url, searchTerm, platforms, digitalStores, finalDict):
+def query_product(url, searchTerm, platforms, exclusions, finalDict):
 
     for platform in platforms:
         allProducts = []
@@ -204,7 +209,7 @@ def query_product(url, searchTerm, platforms, digitalStores, finalDict):
         productList = soup.find_all("a", {"data": "ga_clickthrough_url"})
         for product in productList:
         
-            if product.get("data-store") in digitalStores:
+            if product.get("data-store") in exclusions:
                 continue
         
             store = product.get("data-store")
