@@ -7,8 +7,11 @@ import json
 import datetime
 import select
 import time
+from io import BytesIO
+from fpdf import FPDF
 
-pb = Pushbullet("o.URzMl8FYm2etEpKKGkA3UNzXKGKnm7Cw")
+ACCESS_TOKEN = "o.URzMl8FYm2etEpKKGkA3UNzXKGKnm7Cw"
+pb = Pushbullet(ACCESS_TOKEN)
 
 
 class PriceAlert():
@@ -39,7 +42,8 @@ class PriceAlert():
             print("[3] View games on scrape list")
             print("[4] Write payloads to JSON")
             print("[5] Read JSON file into payloads")
-            print("[6] Run a manual scrape")
+            print("[6] Dump JSON to PDF w/ pretty print")
+            print("[7] Run a manual scrape")
             print("[Q] Quit")
 
             selection = input("\nEnter selection: ")
@@ -56,10 +60,13 @@ class PriceAlert():
                 write_payloads_to_json(payloads)
             elif selection == "5": # Read from JSON
                 payloads = read_json_into_payloads()
-            elif selection == "6": # Read from JSON
+            elif selection == "6": # Dump JSON to PDF
+                dump_json_to_pdf()
+                input("\nPress [ENTER] to continue: ")
+            elif selection == "7": # Manual scrape
                 scrape(payloads, url, exclusions, allProducts)
+                dump_json_to_pdf()
                 input("\nPress [ENTER] to continue: ") 
-            elif selection == "Q" or selection == 'q': # Quit
                 exit(0)
             else:
                 print("Invalid selection.")
@@ -73,6 +80,60 @@ class PriceAlert():
     
 def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear')
+
+def generate_catalouge_url():
+    clear_terminal()
+    device = pb.devices[0]
+    resp = requests.post('https://api.pushbullet.com/v2/upload-request', data=json.dumps({'file_name': 'catalouge.pdf'}), headers={'Authorization': 'Bearer ' + ACCESS_TOKEN, 'Content-Type': 'application/json'})
+    if resp.status_code != 200:
+        raise Exception('failed to request upload')
+    r = resp.json()
+    
+    resp = requests.post(r['upload_url'], data=r['data'], files={'file': open('catalouge.pdf', 'rb')})
+    if resp.status_code != 204:
+        raise Exception('failed to upload file')
+    
+    print(r['file_url'])
+    return r['file_url']
+
+
+def dump_json_to_pdf():
+    clear_terminal()
+    f = BytesIO()
+
+    pdf = FPDF()
+    pdf=FPDF(format='A4')
+    pdf.add_page()
+
+    try:
+        with open('all-time-lows.json') as json_file:
+            data = json.load(json_file)
+    except:
+        print("Failed to load JSON!")
+
+    for title in data:
+        pdf.set_font("Arial", "B", size = 16)
+        pdf.set_text_color(220, 50, 50)
+        pdf.cell(200, 10, txt = title, ln = 1, align = 'C')
+        pdf.set_font("Arial", size = 10)
+        
+        for product in data[title]:
+            pdf.set_text_color(0, 0, 0)
+            pdf.cell(200, 10, txt = str(product["store"]), ln = 1, align = 'C')
+            pdf.set_font("Arial", "B", size = 12)
+            pdf.cell(200, 10, txt = "$ " + str(product["price"]), ln = 1, align = 'C')
+            pdf.set_font("Arial", size = 10)
+            pdf.cell(200, 10, txt = str(product["url"]), ln = 1, align = 'C')
+            pdf.set_text_color(0, 0, 255)
+            pdf.cell(200, 10, txt = "----------------------------------------------------------------", ln = 1, align = 'C')
+            #pdf.cell(200, 10, txt = "\n", ln = 1, align = 'C')
+
+        
+        pdf.cell(200, 10, txt = "\n\n", ln = 1, align = 'L')
+
+    pdf.output("test.pdf")   
+    print("Dump successful!")
+    
 
 
 def automatatic_scrape(payloads, url, exclusions, allProducts):
@@ -132,6 +193,7 @@ def read_json_into_payloads():
         return
     
     print("Successfully loaded!")
+    print(f.getvalue())
     input("\nPress [ENTER] to continue: ")
     return data
 
@@ -143,7 +205,7 @@ def write_payloads_to_json(payloads):
         print("Payloads written!")
     except:
         print("Failed to write!")
-
+    
     input("\nPress [ENTER] to continue: ")
 
 def remove_selected_payload(payloads):
@@ -238,7 +300,8 @@ def query_product(url, searchTerm, platforms, exclusions, finalDict):
             
             prodDict = {"title": title, "platform": platform, "store": store, "price": price, "url": produrl}
 
-            allProducts.append(prodDict)
+            if prodDict not in allProducts:
+                allProducts.append(prodDict)
 
 
         key = searchTerm.replace("+", " ") + " | " + platform
@@ -246,8 +309,12 @@ def query_product(url, searchTerm, platforms, exclusions, finalDict):
     return finalDict
 
 def get_lowest_product(allTimeLows):
-
-        smsPayload = ""
+        try:
+            cat_url = generate_catalouge_url()
+            smsPayload = "Catalouge URL: \n" + cat_url + "\n\n"
+        except:
+            smsPayload = ""
+        
         for query in allTimeLows:
             lowestPrice = float('inf')
             for product in allTimeLows[query]:
