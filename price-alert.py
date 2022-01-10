@@ -6,7 +6,7 @@ import os
 import json
 import datetime
 import select
-
+import time
 
 pb = Pushbullet("o.URzMl8FYm2etEpKKGkA3UNzXKGKnm7Cw")
 
@@ -79,9 +79,9 @@ def automatatic_scrape(payloads, url, exclusions, allProducts):
     clear_terminal()
     # Creates a backup before scrape
     write_payloads_to_json(payloads)
-
+    clear_terminal()
     print("Initiating scraping...")
-    times = ['00:00:00', '06:00:00', '09:00:00', '12:00:00']
+    times = ['00:00:00', '06:00:00', '09:00:00', '12:00:00', '13:00:00']
     while True:
         now = datetime.datetime.now()
         current_time = now.strftime("%H:%M:%S")
@@ -97,12 +97,14 @@ def automatatic_scrape(payloads, url, exclusions, allProducts):
                 diff = sched_time - current_raw_time
                 secs_duration = diff.total_seconds()
 
-                if secs_duration < cur_lowest_diff and secs_duration > 0:
+                if secs_duration < cur_lowest_diff:
                     cur_lowest_diff = secs_duration
+                    if cur_lowest_diff < 0:
+                        cur_lowest_diff = 86400 - (cur_lowest_diff * -1)
 
             print("Timestamp: " + str(now))
-            print("Sleeping for: " + str ((cur_lowest_diff - 3)/60) + " minutes")
-            time.sleep(cur_lowest_diff - 3)
+            print("Sleeping for: " + str ((cur_lowest_diff)/60) + " minutes")
+            time.sleep(cur_lowest_diff)
             
 
 def scrape(payloads, url, exclusions, allProducts):
