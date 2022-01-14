@@ -142,26 +142,29 @@ def automatatic_scrape(payloads, url, exclusions, allProducts):
     write_payloads_to_json(payloads)
     clear_terminal()
     print("Initiating scraping...")
-    times = ['00:00:00', '06:00:00', '09:00:00', '12:00:00', '13:00:00']
+    times = ['00:00:00', '06:00:00', '09:00:00', '12:00:00' ]
+    latest_scrape_time = None
     while True:
         now = datetime.datetime.now()
         current_time = now.strftime("%H:%M:%S")
 
         if current_time in times:
+            latest_scrape_time = current_time
             scrape(payloads, url, exclusions, allProducts)
         else:
             current_raw_time = datetime.datetime.strptime(current_time, "%H:%M:%S")
             cur_lowest_diff = float('inf')
 
             for timeVal in times:
-                sched_time = datetime.datetime.strptime(timeVal, "%H:%M:%S")
-                diff = sched_time - current_raw_time
-                secs_duration = diff.total_seconds()
+                if timeVal != latest_scrape_time:
+                    sched_time = datetime.datetime.strptime(timeVal, "%H:%M:%S")
+                    diff = sched_time - current_raw_time
+                    secs_duration = diff.total_seconds()
 
-                if secs_duration < cur_lowest_diff:
-                    cur_lowest_diff = secs_duration
-                    if cur_lowest_diff < 0:
-                        cur_lowest_diff = 86400 - (cur_lowest_diff * -1)
+                    if secs_duration < cur_lowest_diff:
+                        cur_lowest_diff = secs_duration
+                        if cur_lowest_diff < 0:
+                            cur_lowest_diff = 86400 - (cur_lowest_diff * -1)
 
             print("Timestamp: " + str(now))
             print("Sleeping for: " + str ((cur_lowest_diff)/60) + " minutes")
