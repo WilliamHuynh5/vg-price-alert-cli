@@ -65,7 +65,6 @@ class PriceAlert():
                 input("\nPress [ENTER] to continue: ")
             elif selection == "7": # Manual scrape
                 scrape(payloads, url, exclusions, allProducts)
-                dump_json_to_pdf()
                 input("\nPress [ENTER] to continue: ") 
                 exit(0)
             else:
@@ -148,7 +147,7 @@ def automatatic_scrape(payloads, url, exclusions, allProducts):
         now = datetime.datetime.now()
         current_time = now.strftime("%H:%M:%S")
 
-        if current_time in times:
+        if current_time in times and scrape_time != current_time:
             latest_scrape_time = current_time
             scrape(payloads, url, exclusions, allProducts)
         else:
@@ -313,6 +312,7 @@ def query_product(url, searchTerm, platforms, exclusions, finalDict):
 
 def get_lowest_product(allTimeLows):
         try:
+            dump_json_to_pdf()
             cat_url = generate_catalouge_url()
             smsPayload = "Catalouge URL: \n" + cat_url + "\n\n"
         except:
