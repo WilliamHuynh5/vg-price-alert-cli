@@ -131,7 +131,7 @@ def dump_json_to_pdf():
         
         pdf.cell(200, 10, txt = "\n\n", ln = 1, align = 'L')
 
-    pdf.output("test.pdf")   
+    pdf.output("catalouge.pdf")   
     print("Dump successful!")
     
 
