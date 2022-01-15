@@ -9,6 +9,7 @@ import select
 import time
 from io import BytesIO
 from fpdf import FPDF
+import schedule
 
 ACCESS_TOKEN = "o.URzMl8FYm2etEpKKGkA3UNzXKGKnm7Cw"
 pb = Pushbullet(ACCESS_TOKEN)
@@ -92,7 +93,7 @@ def generate_catalouge_url():
     if resp.status_code != 204:
         raise Exception('failed to upload file')
     
-    print(r['file_url'])
+    #print(r['file_url'])
     return r['file_url']
 
 
@@ -141,33 +142,16 @@ def automatatic_scrape(payloads, url, exclusions, allProducts):
     write_payloads_to_json(payloads)
     clear_terminal()
     print("Initiating scraping...")
-    times = ['00:00:00', '06:00:00', '09:00:00', '12:00:00' ]
-    latest_scrape_time = None
+
+
+    schedule.every().day.at("00:00").do(scrape, payloads, url, exclusions, allProducts)
+    schedule.every().day.at("06:00").do(scrape, payloads, url, exclusions, allProducts)
+    schedule.every().day.at("09:00").do(scrape, payloads, url, exclusions, allProducts)
+    schedule.every().day.at("12:00").do(scrape, payloads, url, exclusions, allProducts)
     while True:
-        now = datetime.datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-
-        if current_time in times and scrape_time != current_time:
-            latest_scrape_time = current_time
-            scrape(payloads, url, exclusions, allProducts)
-        else:
-            current_raw_time = datetime.datetime.strptime(current_time, "%H:%M:%S")
-            cur_lowest_diff = float('inf')
-
-            for timeVal in times:
-                if timeVal != latest_scrape_time:
-                    sched_time = datetime.datetime.strptime(timeVal, "%H:%M:%S")
-                    diff = sched_time - current_raw_time
-                    secs_duration = diff.total_seconds()
-
-                    if secs_duration < cur_lowest_diff:
-                        cur_lowest_diff = secs_duration
-                        if cur_lowest_diff < 0:
-                            cur_lowest_diff = 86400 - (cur_lowest_diff * -1)
-
-            print("Timestamp: " + str(now))
-            print("Sleeping for: " + str ((cur_lowest_diff)/60) + " minutes")
-            time.sleep(cur_lowest_diff)
+        print("Attempting scrape at " + str(datetime.datetime.now()))
+        schedule.run_pending()
+        time.sleep(60)
             
 
 def scrape(payloads, url, exclusions, allProducts):

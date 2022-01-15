@@ -10,6 +10,7 @@ productList = soup.find_all("dt", {"class": "title"})
 for product in productList:
     for tag in product:
         for x in tag:
-            print(x)
+            if "expired" not in str(x):
+                print(x)
             
 
