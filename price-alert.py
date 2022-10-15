@@ -11,7 +11,8 @@ from io import BytesIO
 from fpdf import FPDF
 import schedule
 
-ACCESS_TOKEN = "o.URzMl8FYm2etEpKKGkA3UNzXKGKnm7Cw"
+# Please provide your own PushBullet API Key here
+ACCESS_TOKEN = ""
 pb = Pushbullet(ACCESS_TOKEN)
 
 
@@ -72,12 +73,6 @@ class PriceAlert():
                 print("Invalid selection.")
                 exit(0)
         
-
-
-
-
-
-    
 def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -126,7 +121,6 @@ def dump_json_to_pdf():
             pdf.cell(200, 10, txt = str(product["url"]), ln = 1, align = 'C')
             pdf.set_text_color(0, 0, 255)
             pdf.cell(200, 10, txt = "----------------------------------------------------------------", ln = 1, align = 'C')
-            #pdf.cell(200, 10, txt = "\n", ln = 1, align = 'C')
 
         
         pdf.cell(200, 10, txt = "\n\n", ln = 1, align = 'L')
@@ -179,7 +173,6 @@ def read_json_into_payloads():
         return
     
     print("Successfully loaded!")
-    print(f.getvalue())
     input("\nPress [ENTER] to continue: ")
     return data
 
@@ -314,20 +307,11 @@ def get_lowest_product(allTimeLows):
                 if price <= lowestPrice:
 
                     smsPayload = smsPayload + "Title: " + platf + " | " + title + "\n" + "Store: " + lowestStore + "\n" + "Price: " + "$" + str(price) + "\n" + "  URL: " + url + "\n\n"
-
-                    # print("###### LOWEST ######")
-                    # print("Title: " + platf + " | " + title)
-                    # print("Store: " + lowestStore)
-                    # print("Price: " + "$" + str(price))
-                    # print("  URL: " + url)
-                    
-
-
-                    #print("####################")
                     lowestPrice = price
+                    
         device = pb.devices[0]
-        # Uncomment this to send to phone
-        push = pb.push_sms(device, "+61405991322", smsPayload) 
+        # Uncomment this to send an SMS to your phone number
+        # push = pb.push_sms(device, "PHONE NUMBER HERE", smsPayload) 
 
 priceAlert = PriceAlert()
 priceAlert.run()
